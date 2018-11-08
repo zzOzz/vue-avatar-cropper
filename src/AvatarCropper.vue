@@ -16,29 +16,36 @@
 <script>
   import 'cropperjs/dist/cropper.css'
   import Cropper from 'cropperjs'
-
   export default {
     props: {
+      view: {
+        type: Boolean,
+        default: false
+      },
+      ratio: {
+        type: Number,
+        default: 3 / 2
+      },
       trigger: {
         type: [String, Element],
-        required: true
+        required: false
       },
       uploadHandler: {
-        type: Function,
+        type: Function
       },
       uploadUrl: {
-        type: String,
+        type: String
       },
       uploadHeaders: {
-        type: Object,
+        type: Object
       },
       uploadFormName: {
         type: String,
-        default: 'file'
+        default: 'img'
       },
       uploadFormData: {
         type: Object,
-        default() {
+        default () {
           return {}
         }
       },
@@ -48,26 +55,32 @@
       },
       labels: {
         type: Object,
-        default() {
+        default () {
           return {
-            submit: "提交",
-            cancel: "取消"
+            submit: 'Submit',
+            cancel: 'Cancel'
           }
         }
       }
     },
-    data() {
+    data () {
       return {
         cropper: undefined,
         dataUrl: undefined
       }
     },
+    watch: {
+      view: function (newValue) {
+        console.log('change:' + newValue)
+        this.pickImage()
+      }
+    },
     methods: {
-      destroy() {
+      destroy () {
         this.cropper.destroy()
         this.dataUrl = undefined
       },
-      submit() {
+      submit () {
         if (this.uploadUrl) {
           this.uploadImage()
         } else if (this.uploadHandler) {
@@ -77,11 +90,15 @@
         }
         this.destroy()
       },
-      pickImage() {
+      pickImage () {
         let id = 'avatar-img-input'
-        let fileInput = document.querySelector('input#'+id+'[type=file]')
+        let fileInput = document.querySelector('input#' + id + '[type=file]')
+        console.log('pickImage:' + fileInput)
         if (fileInput == null) {
+          console.log('createElement')
           fileInput = document.createElement('input')
+          fileInput.value = ''
+          fileInput.type = 'file'
           fileInput.id = id
           fileInput.setAttribute('type', 'file')
           fileInput.setAttribute('accept', this.mimes)
@@ -90,24 +107,29 @@
               let reader = new FileReader()
               reader.onload = (e) => {
                 this.dataUrl = e.target.result
+                console.log(this.dataUrl.length)
               }
               reader.readAsDataURL(fileInput.files[0])
+              fileInput.value = ''
+              fileInput.type = 'file'
             }
           })
+          document.querySelector(this.trigger).append(fileInput)
+          console.log(document.querySelector('input#' + id + '[type=file]'))
         }
         fileInput.click()
       },
-      createCropper() {
+      createCropper () {
         let image = document.querySelector('.avatar-cropper-image-container img')
         this.cropper = new Cropper(image, {
-          aspectRatio: 1,
+          aspectRatio: this.ratio,
           autoCropArea: 1,
           viewMode: 1,
           movable: false,
-          zoomable: false,
+          zoomable: false
         })
       },
-      uploadImage() {
+      uploadImage () {
         this.cropper.getCroppedCanvas().toBlob((blob) => {
           let form = new FormData()
           let xhr = new XMLHttpRequest()
@@ -124,10 +146,12 @@
           xhr.open('POST', this.uploadUrl, true)
 
           for (let header in this.uploadHeaders) {
+            console.log(`${header}: ${this.uploadHeaders[header]}`)
             xhr.setRequestHeader(header, this.uploadHeaders[header])
           }
 
           xhr.onreadystatechange = () => {
+            console.log(`xhr status: ${xhr.status}`)
             if (xhr.readyState === 4) {
               var response = JSON.parse(xhr.responseText)
               if (xhr.status === 200) {
@@ -137,16 +161,17 @@
               }
             }
           }
-          xhr.send(form);
+          xhr.send(form)
         })
       }
     },
-    mounted() {
-      let trigger = typeof this.trigger == 'object' ? this.trigger : document.querySelector(this.trigger)
+    mounted () {
+      let trigger = typeof this.trigger === 'object' ? this.trigger : document.querySelector(this.trigger)
       if (!trigger) {
         throw new Error('No avatar make trigger found.')
+      } else {
+        trigger.addEventListener('click', this.pickImage)
       }
-      trigger.addEventListener('click', this.pickImage)
     }
   }
 </script>
@@ -163,6 +188,7 @@
     right:0;
     bottom:0;
     z-index: 99999;
+    background-color: rgba(0, 0, 0, 0.5);
 
     .avatar-cropper-close {
       float: right;
@@ -213,6 +239,7 @@
             background-color: #2aabd2;
             color: #fff;
           }
+          margin: 0px;
         }
       }
     }
